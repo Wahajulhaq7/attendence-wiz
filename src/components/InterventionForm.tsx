@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import type { Student } from '@/types';
@@ -12,12 +13,13 @@ import { BrainCircuit, Loader2, WandSparkles } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface InterventionFormProps {
-  students: Student[]; // Pass all students to select from
+  students: Student[];
+  calculateTotalAbsences: (student: Student) => number;
 }
 
-export function InterventionForm({ students: allStudents }: InterventionFormProps) {
+export function InterventionForm({ students: allStudents, calculateTotalAbsences }: InterventionFormProps) {
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [absenceRecord, setAbsenceRecord] = useState('');
+  const [absenceRecordText, setAbsenceRecordText] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -25,33 +27,34 @@ export function InterventionForm({ students: allStudents }: InterventionFormProp
 
   useEffect(() => {
     setMounted(true);
-    // Pre-select first student with absences if available
-    const firstAbsentStudent = allStudents.find(s => s.absenceCount > 0);
-    if (firstAbsentStudent) {
-      setSelectedStudentId(firstAbsentStudent.id);
-      updateAbsenceRecord(firstAbsentStudent);
-    } else if (allStudents.length > 0) {
-      setSelectedStudentId(allStudents[0].id);
-      updateAbsenceRecord(allStudents[0]);
+    if (allStudents.length > 0) {
+      // Pre-select first student with absences if available, otherwise first student
+      const studentWithAbsences = allStudents.find(s => calculateTotalAbsences(s) > 0);
+      const studentToSelect = studentWithAbsences || allStudents[0];
+      if (studentToSelect) {
+        setSelectedStudentId(studentToSelect.id);
+        updateAbsenceRecordDisplay(studentToSelect);
+      }
     }
-  }, [allStudents]);
+  }, [allStudents, calculateTotalAbsences]);
 
-  const updateAbsenceRecord = (student: Student | undefined) => {
+  const updateAbsenceRecordDisplay = (student: Student | undefined) => {
     if (student) {
-      const record = student.absenceCount > 0 
-        ? `${student.name} has ${student.absenceCount} recorded absence${student.absenceCount > 1 ? 's' : ''}. Consider potential reasons and patterns.`
+      const totalAbsences = calculateTotalAbsences(student);
+      const record = totalAbsences > 0 
+        ? `${student.name} has ${totalAbsences} recorded absence${totalAbsences > 1 ? 's' : ''} in total. Consider potential reasons and patterns.`
         : `${student.name} currently has no recorded absences. This tool is most effective for students with existing attendance concerns.`;
-      setAbsenceRecord(record);
+      setAbsenceRecordText(record);
     } else {
-      setAbsenceRecord('');
+      setAbsenceRecordText('');
     }
   };
 
   const handleStudentChange = (studentId: string) => {
     setSelectedStudentId(studentId);
     const student = allStudents.find(s => s.id === studentId);
-    updateAbsenceRecord(student);
-    setSuggestions([]); // Clear previous suggestions
+    updateAbsenceRecordDisplay(student);
+    setSuggestions([]); 
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,9 +82,10 @@ export function InterventionForm({ students: allStudents }: InterventionFormProp
     setSuggestions([]);
 
     try {
+      // The AI flow expects a general 'absenceRecord', so we use the display text.
       const input: SuggestInterventionInput = {
         studentName: student.name,
-        absenceRecord: absenceRecord,
+        absenceRecord: absenceRecordText, 
       };
       const result = await suggestIntervention(input);
       setSuggestions(result.interventionSuggestions);
@@ -134,7 +138,7 @@ export function InterventionForm({ students: allStudents }: InterventionFormProp
               <SelectContent>
                 {allStudents.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    {s.name} (Absences: {s.absenceCount})
+                    {s.name} (Total Absences: {calculateTotalAbsences(s)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -142,17 +146,17 @@ export function InterventionForm({ students: allStudents }: InterventionFormProp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="absence-record">Absence Record (Auto-generated)</Label>
+            <Label htmlFor="absence-record">Absence Record Summary (Auto-generated)</Label>
             <Textarea
               id="absence-record"
-              value={absenceRecord}
+              value={absenceRecordText}
               readOnly
               rows={3}
               className="bg-muted/50 border-dashed"
               aria-label="Absence record details for the selected student"
             />
              <p className="text-xs text-muted-foreground">
-              This record is based on current data. The AI will use this to generate suggestions.
+              This summary is based on the student's overall attendance. The AI will use this to generate suggestions.
             </p>
           </div>
         </CardContent>

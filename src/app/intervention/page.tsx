@@ -1,21 +1,20 @@
+
 'use client';
-// This page must be a client component to manage student data for the form.
-// In a real app, this data might come from a global state or API.
 import { useState, useEffect } from 'react';
 import { InterventionForm } from '@/components/InterventionForm';
-import { INITIAL_STUDENTS } from '@/lib/constants'; // Using the same initial students for now
+import { INITIAL_STUDENTS } from '@/lib/constants'; 
 import type { Student } from '@/types';
+import { calculateTotalAbsences } from '@/lib/utils';
 
 export default function InterventionPage() {
-  // For simplicity, we use the same initial student data.
-  // A real app would likely fetch this or use a state management solution.
   const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // Here you could fetch updated student data if needed
-    // For this example, we'll stick to the initial data passed to the form.
+    // In a real app, student data might be fetched or come from a global state.
+    // For now, we're using INITIAL_STUDENTS which now has the new 'attendance' structure.
+    // The InterventionForm will calculate total absences from this structure.
   }, []);
 
   if (!mounted) {
@@ -24,7 +23,7 @@ export default function InterventionPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <InterventionForm students={students} />
+      <InterventionForm students={students} calculateTotalAbsences={calculateTotalAbsences} />
     </div>
   );
 }

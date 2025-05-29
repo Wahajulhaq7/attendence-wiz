@@ -1,3 +1,4 @@
+
 'use client';
 import type { Student, AttendanceStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,7 +10,9 @@ import { cn } from '@/lib/utils';
 
 interface StudentListProps {
   students: Student[];
-  onUpdateAttendance: (studentId: string, status: AttendanceStatus) => void;
+  currentDate: string;
+  onUpdateAttendance: (studentId: string, status: AttendanceStatus, date: string) => void;
+  calculateTotalAbsences: (student: Student) => number;
 }
 
 const statusIcons = {
@@ -25,7 +28,7 @@ const statusBadgeVariants = {
 };
 
 
-export function StudentList({ students, onUpdateAttendance }: StudentListProps) {
+export function StudentList({ students, currentDate, onUpdateAttendance, calculateTotalAbsences }: StudentListProps) {
   
   const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -40,8 +43,8 @@ export function StudentList({ students, onUpdateAttendance }: StudentListProps) 
           <TableRow className="bg-muted/50">
             <TableHead className="w-[80px] hidden sm:table-cell">Avatar</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-center">Absence Count</TableHead>
+            <TableHead className="text-center">Status ({currentDate.substring(5)})</TableHead>
+            <TableHead className="text-center">Total Absences</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -49,48 +52,52 @@ export function StudentList({ students, onUpdateAttendance }: StudentListProps) 
           {students.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                No students to display.
+                No students to display for the selected filters.
               </TableCell>
             </TableRow>
           ) : (
-            students.map((student) => (
-              <TableRow key={student.id} className="hover:bg-muted/20 transition-colors">
-                <TableCell className="hidden sm:table-cell">
-                  <Avatar className="h-10 w-10 border">
-                    <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(student.name)}`} alt={student.name} data-ai-hint="avatar person" />
-                    <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
-                  </Avatar>
-                </TableCell>
-                <TableCell className="font-medium">{student.name}</TableCell>
-                <TableCell className="text-center">
-                  <Badge variant="outline" className={cn("capitalize", statusBadgeVariants[student.status])}>
-                    {statusIcons[student.status]}
-                    <span className="ml-2">{student.status}</span>
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center">{student.absenceCount}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onUpdateAttendance(student.id, 'present')}
-                    disabled={student.status === 'present'}
-                    className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white disabled:opacity-70"
-                  >
-                    <UserCheck className="mr-1 h-4 w-4" /> Present
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onUpdateAttendance(student.id, 'absent')}
-                    disabled={student.status === 'absent'}
-                    className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white disabled:opacity-70"
-                  >
-                    <UserX className="mr-1 h-4 w-4" /> Absent
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
+            students.map((student) => {
+              const currentStatus = student.attendance[currentDate] || 'pending';
+              const totalAbsences = calculateTotalAbsences(student);
+              return (
+                <TableRow key={student.id} className="hover:bg-muted/20 transition-colors">
+                  <TableCell className="hidden sm:table-cell">
+                    <Avatar className="h-10 w-10 border">
+                      <AvatarImage src={`https://placehold.co/40x40.png?text=${getInitials(student.name)}`} alt={student.name} data-ai-hint="avatar person"/>
+                      <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={cn("capitalize", statusBadgeVariants[currentStatus])}>
+                      {statusIcons[currentStatus]}
+                      <span className="ml-2">{currentStatus}</span>
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">{totalAbsences}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onUpdateAttendance(student.id, 'present', currentDate)}
+                      disabled={currentStatus === 'present'}
+                      className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white disabled:opacity-70"
+                    >
+                      <UserCheck className="mr-1 h-4 w-4" /> Present
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onUpdateAttendance(student.id, 'absent', currentDate)}
+                      disabled={currentStatus === 'absent'}
+                      className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white disabled:opacity-70"
+                    >
+                      <UserX className="mr-1 h-4 w-4" /> Absent
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

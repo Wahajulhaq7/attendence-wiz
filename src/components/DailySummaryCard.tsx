@@ -1,25 +1,28 @@
 import type { Student } from '@/types';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Users, UserCheck, UserX } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 interface DailySummaryCardProps {
   students: Student[];
+  currentDate: string;
 }
 
-export function DailySummaryCard({ students }: DailySummaryCardProps) {
+export function DailySummaryCard({ students, currentDate }: DailySummaryCardProps) {
   const totalStudents = students.length;
-  const presentStudents = students.filter(s => s.status === 'present').length;
-  const absentStudents = students.filter(s => s.status === 'absent').length;
-  const pendingStudents = students.filter(s => s.status === 'pending').length;
+  
+  const presentStudents = students.filter(s => s.attendance[currentDate] === 'present').length;
+  const absentStudents = students.filter(s => s.attendance[currentDate] === 'absent').length;
+  const pendingStudents = students.filter(s => (s.attendance[currentDate] === 'pending' || !s.attendance[currentDate])).length;
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg flex-1">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-2xl">
           <Users className="h-7 w-7 text-primary" />
           Daily Attendance Summary
         </CardTitle>
-        <CardDescription>Overview for {new Date().toLocaleDateString()}</CardDescription>
+        <CardDescription>Overview for {format(parseISO(currentDate), 'MMMM d, yyyy')}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-3">
         <div className="flex items-center gap-3 rounded-lg bg-green-100 dark:bg-green-900/50 p-4">
